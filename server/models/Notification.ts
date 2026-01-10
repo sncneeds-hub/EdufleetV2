@@ -15,7 +15,11 @@ export interface INotification extends Document {
     | 'browse_limit_warning'
     | 'listing_limit_reached'
     | 'new_feature'
-    | 'system_alert';
+    | 'system_alert'
+    | 'info'
+    | 'success'
+    | 'warning'
+    | 'error';
   title: string;
   message: string;
   priority?: 'low' | 'medium' | 'high';
@@ -49,7 +53,11 @@ const notificationSchema = new Schema<INotification>(
         'browse_limit_warning',
         'listing_limit_reached',
         'new_feature',
-        'system_alert'
+        'system_alert',
+        'info',
+        'success',
+        'warning',
+        'error'
       ],
     },
     title: {
