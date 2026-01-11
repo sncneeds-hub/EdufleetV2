@@ -459,26 +459,42 @@ export const getApplications = async (req: Request, res: Response) => {
 };
 
 // State machine validation helper
+// RELAXED TRANSITIONS: Allow any reasonable status change for smooth UX
+// Users should be able to accept directly from any state, reject from any state, etc.
 const validateStatusTransition = (currentStatus: string, newStatus: string): { valid: boolean; error?: string } => {
-  // Define valid transitions
-  const validTransitions: Record<string, string[]> = {
-    pending: ['reviewed', 'rejected'],
-    reviewed: ['shortlisted', 'rejected'],
-    shortlisted: ['interview_scheduled', 'rejected'],
-    interview_scheduled: ['accepted', 'rejected'],
-    accepted: [], // Terminal state
-    rejected: [], // Terminal state
-  };
-
-  // Check if transition is valid
-  if (!validTransitions[currentStatus]) {
-    return { valid: false, error: `Invalid current status: ${currentStatus}` };
-  }
-
-  if (!validTransitions[currentStatus].includes(newStatus)) {
+  // All valid statuses
+  const allStatuses = ['pending', 'reviewed', 'shortlisted', 'interview_scheduled', 'accepted', 'rejected'];
+  
+  // Check if new status is valid
+  if (!allStatuses.includes(newStatus)) {
     return {
       valid: false,
-      error: `Cannot transition from ${currentStatus} to ${newStatus}. Valid transitions: ${validTransitions[currentStatus].join(', ') || 'none (terminal state)'}`,
+      error: `Invalid status: ${newStatus}. Valid statuses: ${allStatuses.join(', ')}`,
+    };
+  }
+
+  // No transition needed if status is the same
+  if (currentStatus === newStatus) {
+    return { valid: true };
+  }
+
+  // RELAXED POLICY: Allow nearly all transitions for user flexibility
+  // The only restriction: once "accepted", you can only change to "rejected" (to correct mistakes)
+  // This provides smooth UX while maintaining logical workflow
+  
+  // Define any truly invalid transitions (minimal restrictions)
+  const invalidTransitions: Record<string, string[]> = {
+    // Once accepted, can only reject (not go back to earlier stages)
+    accepted: ['pending', 'reviewed', 'shortlisted', 'interview_scheduled'],
+  };
+
+  // Check if this specific transition is blocked
+  if (invalidTransitions[currentStatus]?.includes(newStatus)) {
+    // Provide helpful message about what CAN be done
+    const allowedFromAccepted = allStatuses.filter(s => !invalidTransitions.accepted.includes(s) && s !== 'accepted');
+    return {
+      valid: false,
+      error: `Cannot change from "${currentStatus}" to "${newStatus}". From accepted status, you can only change to: ${allowedFromAccepted.join(', ')}`,
     };
   }
 
@@ -560,10 +576,12 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
     // Update interview details if provided
     if (interviewScheduled) {
       // Validate that application is in correct state for scheduling
-      if (application.status !== 'shortlisted' && application.status !== 'interview_scheduled') {
+      // Allow scheduling from any state EXCEPT rejected or accepted (makes no sense to schedule for those)
+      const disallowedStates = ['rejected', 'accepted'];
+      if (disallowedStates.includes(application.status)) {
         return res.status(400).json({
           success: false,
-          error: 'Interview can only be scheduled for shortlisted applications',
+          error: `Interview cannot be scheduled for ${application.status} applications. Please change the status first.`,
           code: 'INVALID_STATE_FOR_INTERVIEW',
         });
       }
@@ -573,8 +591,8 @@ export const updateApplicationStatus = async (req: Request, res: Response) => {
         scheduledAt: new Date(),
       };
 
-      // Auto-update status to interview_scheduled if currently shortlisted
-      if (application.status === 'shortlisted') {
+      // Auto-update status to interview_scheduled if not already there
+      if (application.status !== 'interview_scheduled') {
         application.status = 'interview_scheduled';
         if (!application.statusHistory) {
           application.statusHistory = [];
