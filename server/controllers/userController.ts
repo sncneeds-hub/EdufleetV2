@@ -74,6 +74,10 @@ export const getUsers = async (req: AuthRequest, res: Response): Promise<void> =
     if (isAvailable !== undefined) {
       query.isAvailable = isAvailable === 'true';
     }
+       // Filter by instituteSearchability (only show teachers who opted in)
+    if (role === 'teacher') {
+      query.instituteSearchability = true;
+    }
 
     // Filter by subjects
     if (subjects) {
@@ -221,6 +225,7 @@ export const updateUserProfile = async (req: AuthRequest, res: Response): Promis
       'subjects',
       'bio',
       'isAvailable',
+      'instituteSearchability',
       'avatar',
       'instituteCode'
     ];
