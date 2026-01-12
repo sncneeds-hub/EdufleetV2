@@ -35,6 +35,7 @@ export interface IUser extends Document {
   };
   isVerified: boolean;
   isActive: boolean;
+  instituteSearchability?: boolean;
   isAvailable: boolean;
   experience?: number;
   qualifications?: string[];
@@ -158,6 +159,10 @@ const userSchema = new Schema<IUser>(
     isAvailable: {
       type: Boolean,
       default: true,
+    },
+    instituteSearchability: {
+      type: Boolean,
+      default: false,
     },
     experience: {
       type: Number,
