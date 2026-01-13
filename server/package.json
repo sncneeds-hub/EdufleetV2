@@ -13,7 +13,8 @@
     "seed": "tsx ./scripts/seed.ts",
     "seed:scenarios": "tsx ./scripts/seedScenarios.ts",
     "seed:users": "tsx ./scripts/seedData/users.ts",
-    "seed:vehicles": "tsx ./scripts/seedData/vehicles.ts"
+    "seed:vehicles": "tsx ./scripts/seedData/vehicles.ts",
+    "seed:ads": "tsx ./scripts/seedAds.ts"
   },
   "engines": {
     "node": ">=18.0.0",

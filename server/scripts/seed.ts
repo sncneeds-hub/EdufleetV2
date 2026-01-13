@@ -16,10 +16,46 @@ import Application from '../models/Application.js';
 import Supplier from '../models/Supplier.js';
 import SubscriptionPlan from '../models/SubscriptionPlan.js';
 import Notification from '../models/Notification.js';
+import { Ad } from '../models/Ad.js';
 
 dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/edufleet';
+
+// Helper to sanitize ad data and fix validation errors
+const sanitizeAd = (ad: any) => {
+  let priority = ad.priority;
+  
+  // Fix priority if it's a string (e.g. "high" -> 10)
+  if (typeof priority === 'string') {
+    const p = priority.toLowerCase();
+    if (p === 'high') priority = 10;
+    else if (p === 'medium') priority = 5;
+    else if (p === 'low') priority = 1;
+    else priority = 5; // Default fallback
+  }
+
+  // Ensure priority is a number
+  if (typeof priority !== 'number') {
+    priority = 5;
+  }
+
+  // Map 'approved' status to 'active' to match Ad model enum
+  let status = ad.status;
+  if (status === 'approved') {
+    status = 'active';
+  }
+
+  return {
+    ...ad,
+    priority,
+    status,
+    // Ensure required fields exist
+    placement: ad.placement || 'LP_TOP_BANNER',
+    targetUrl: ad.targetUrl || 'https://example.com',
+    advertiser: ad.advertiser || 'Unknown Advertiser',
+  };
+};
 
 // Color console output
 const colors = {
@@ -76,6 +112,9 @@ async function clearDatabase() {
     
     await Notification.deleteMany({});
     log.info('Cleared Notifications collection');
+
+    await Ad.deleteMany({});
+    log.info('Cleared Ads collection');
     
     log.success('Database cleared successfully');
   } catch (error) {
@@ -336,6 +375,23 @@ async function seedNotifications(users: any[], vehicles: any[]) {
   }
 }
 
+// Seed ads
+async function seedAds() {
+  log.section('Seeding Ads');
+  try {
+    // Sanitize data before insertion
+    const sanitizedAds = adsData.map(sanitizeAd);
+    const ads = await Ad.insertMany(sanitizedAds);
+    log.success(`Created ${ads.length} ads`);
+    log.info(`- ${ads.filter(a => a.status === 'active').length} active ads`);
+    log.info(`- ${ads.filter(a => a.status === 'pending').length} pending ads`);
+    return ads;
+  } catch (error) {
+    log.error(`Error seeding ads: ${error}`);
+    throw error;
+  }
+}
+
 // Display credentials
 function displayCredentials() {
   log.section('Login Credentials');
@@ -371,6 +427,7 @@ async function seed() {
     
     const users = await seedUsers();
     const plans = await seedSubscriptionPlans();
+    const ads = await seedAds();
     const vehicles = await seedVehicles(users);
     const jobs = await seedJobs(users);
     const applications = await seedJobApplications(users, jobs);
@@ -381,13 +438,12 @@ async function seed() {
     console.log(`
 ${colors.green}✓ Users:${colors.reset}            ${users.length}
 ${colors.green}✓ Plans:${colors.reset}            ${plans.length}
+${colors.green}✓ Ads:${colors.reset}              ${ads.length}
 ${colors.green}✓ Vehicles:${colors.reset}         ${vehicles.length}
 ${colors.green}✓ Jobs:${colors.reset}             ${jobs.length}
 ${colors.green}✓ Applications:${colors.reset}     ${applications.length}
 ${colors.green}✓ Suppliers:${colors.reset}        ${suppliers.length}
 ${colors.green}✓ Notifications:${colors.reset}    ${notifications.length}
-
-${colors.yellow}Note: Ad campaigns can be seeded once Ad model is integrated${colors.reset}
     `);
     
     displayCredentials();
