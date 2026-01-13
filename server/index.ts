@@ -25,6 +25,7 @@ import notificationRoutes from './routes/notifications.js';
 import uploadRoutes from './routes/upload.js';
 import subscriptionRoutes from './routes/subscriptions.js';
 import userRoutes from './routes/users.js';
+import adRoutes from './routes/ads.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -70,6 +71,7 @@ app.use(`${apiPrefix}/notifications`, notificationRoutes);
 app.use(`${apiPrefix}/upload`, uploadRoutes);
 app.use(`${apiPrefix}/subscriptions`, subscriptionRoutes);
 app.use(`${apiPrefix}/users`, userRoutes);
+app.use(`${apiPrefix}/ads`, adRoutes);
 
 // 404 handler for undefined routes
 app.use((req: Request, res: Response) => {
