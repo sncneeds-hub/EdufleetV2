@@ -137,3 +137,5 @@ export const optionalAuth = async (
 // Aliases for compatibility
 export const protect = authenticate;
 export const restrictTo = authorize;
+
+export const requireAdmin = authorize('admin');
