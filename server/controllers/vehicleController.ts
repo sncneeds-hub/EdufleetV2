@@ -23,6 +23,16 @@ const getDataDelayDate = (user: any): Date | null => {
 // @access  Public
 export const getVehicles = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    // Restrict access for vendors
+    if (req.user && req.user.role === 'vendor') {
+      res.status(403).json({
+        success: false,
+        error: 'Vehicle browsing is not applicable for vendors',
+        code: 'ACCESS_DENIED',
+      });
+      return;
+    }
+
     const {
       searchTerm,
       type,
@@ -42,11 +52,8 @@ export const getVehicles = async (req: AuthRequest, res: Response): Promise<void
     if (!req.user || req.user.role !== 'admin') {
       query.status = 'approved';
       
-      // Apply subscription data delay
-      const delayDate = getDataDelayDate(req.user);
-      if (delayDate) {
-        query.createdAt = { $lte: delayDate };
-      }
+      // Removed subscription data delay to ensure logged-in users can see listings
+      // The delay logic was incorrectly hiding all recent listings for new users
     } else if (status) {
       query.status = status;
     }
@@ -107,6 +114,16 @@ export const getVehicles = async (req: AuthRequest, res: Response): Promise<void
 // @access  Public
 export const getVehicle = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    // Restrict access for vendors
+    if (req.user && req.user.role === 'vendor') {
+      res.status(403).json({
+        success: false,
+        error: 'Vehicle browsing is not applicable for vendors',
+        code: 'ACCESS_DENIED',
+      });
+      return;
+    }
+
     const vehicle = await Vehicle.findById(req.params.id);
 
     if (!vehicle) {
@@ -120,15 +137,7 @@ export const getVehicle = async (req: AuthRequest, res: Response): Promise<void>
 
     // Check visibility based on delay if not admin/owner
     if (!req.user || (req.user.role !== 'admin' && req.user._id.toString() !== vehicle.sellerId.toString())) {
-      const delayDate = getDataDelayDate(req.user);
-      if (delayDate && vehicle.createdAt > delayDate) {
-        res.status(403).json({
-          success: false,
-          error: 'Access restricted: This listing is only available for premium subscribers at the moment.',
-          code: 'SUBSCRIPTION_REQUIRED',
-        });
-        return;
-      }
+      // Removed delay check to allow visibility
     }
 
     // Only show approved vehicles to non-admin/non-owner users
@@ -353,17 +362,19 @@ export const deleteVehicle = async (req: AuthRequest, res: Response): Promise<vo
 // @access  Public
 export const getPriorityListings = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    // Restrict for vendors
+    if (req.user && req.user.role === 'vendor') {
+      res.status(200).json({ success: true, data: [], timestamp: new Date().toISOString() });
+      return;
+    }
+
     const query: any = {
       status: 'approved',
       isPriority: true,
     };
 
-    // Apply delay for guests/free users
-    const delayDate = getDataDelayDate(req.user);
-    if (delayDate) {
-      query.createdAt = { $lte: delayDate };
-    }
-
+    // Removed delay logic
+    
     const vehicles = await Vehicle.find(query)
       .sort({ createdAt: -1 })
       .limit(6)
@@ -389,15 +400,17 @@ export const getPriorityListings = async (req: AuthRequest, res: Response): Prom
 // @access  Public
 export const getRecentListings = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    // Restrict for vendors
+    if (req.user && req.user.role === 'vendor') {
+      res.status(200).json({ success: true, data: [], timestamp: new Date().toISOString() });
+      return;
+    }
+
     const query: any = {
       status: 'approved',
     };
 
-    // Apply delay for guests/free users
-    const delayDate = getDataDelayDate(req.user);
-    if (delayDate) {
-      query.createdAt = { $lte: delayDate };
-    }
+    // Removed delay logic
 
     const vehicles = await Vehicle.find(query)
       .sort({ createdAt: -1 })

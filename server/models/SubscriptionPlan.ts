@@ -41,8 +41,7 @@ const subscriptionPlanSchema = new Schema<ISubscriptionPlan>(
     },
     planType: {
       type: String,
-      enum: ['teacher', 'institute', 'vendor'],
-      default: 'institute',
+      required: true,
     },
     description: {
       type: String,
