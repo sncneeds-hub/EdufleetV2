@@ -26,6 +26,7 @@ import uploadRoutes from './routes/upload.js';
 import subscriptionRoutes from './routes/subscriptions.js';
 import userRoutes from './routes/users.js';
 import adRoutes from './routes/ads.js';
+import personaAccessRoutes from './routes/personaAccessRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -72,6 +73,7 @@ app.use(`${apiPrefix}/upload`, uploadRoutes);
 app.use(`${apiPrefix}/subscriptions`, subscriptionRoutes);
 app.use(`${apiPrefix}/users`, userRoutes);
 app.use(`${apiPrefix}/ads`, adRoutes);
+app.use(`${apiPrefix}/access`, personaAccessRoutes);
 
 // 404 handler for undefined routes
 app.use((req: Request, res: Response) => {
